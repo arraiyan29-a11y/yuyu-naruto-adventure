@@ -296,7 +296,7 @@ function gameOver() {
     running = false;
     document.getElementById("menu").style.display = "flex";
     document.getElementById("menuTitle").textContent =
-    "YUYU NARUTO ADVENTURE!";
+    "RAIYONS NARUTO ADVENTURE!";
     document.getElementById("menuText").textContent =
         "Final Score: " + score;
     document.getElementById("play").textContent = "PLAY AGAIN";
