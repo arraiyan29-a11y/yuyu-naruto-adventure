@@ -1,6 +1,6 @@
-# YUYU Naruto Adventure
+# PENGEMBARAAN RAIYONS: RAIYONS NARUTO ADVENTURE!
 
-A small browser-based canvas platform game. Collect the floating coins, avoid the roaming enemies, and reach the finish flag.
+A colorful browser-based Naruto-inspired platform adventure. Collect coins, avoid roaming enemies, and reach the finish flag!
 
 ## Run the game
 
