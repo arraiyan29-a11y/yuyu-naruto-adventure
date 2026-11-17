@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YUYU CREATER: YUYU NARUTO ADVENTURE!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="game-container">
+   <h1>🍥 YUYU CREATER</h1>
+<h3>YUYU NARUTO ADVENTURE!</h3>
+
+    <div class="stats">
+        <span>⭐ Score: <b id="score">0</b></span>
+        <span>❤️ Lives: <b id="lives">3</b></span>
+    </div>
+
+    <div class="screen">
+        <canvas id="game" width="800" height="450"></canvas>
+        <div id="menu">
+            <h2 id="menuTitle">YUYU NARUTO ADVENTURE!</h2>
+            <p id="menuText">Ready to become a Hokage?</p>
+            <button id="play">▶ PLAY GAME</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="left">⬅️</button>
+        <button id="jump">⬆️ JUMP</button>
+        <button id="right">➡️</button>
+    </div>
+
+    <div class="actions">
+        <button id="pause">⏸ PAUSE</button>
+        <button id="restart">🔄 RESTART</button>
+    </div>
+
+    <p class="footer">GAM RAIYAN GAMING © 2026</p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

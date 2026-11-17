@@ -1,0 +1,393 @@
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = 800;
+const H = 450;
+
+let score = 0;
+let lives = 3;
+let running = false;
+let paused = false;
+let camera = 0;
+let keys = {};
+let coins = [];
+let enemies = [];
+
+const player = {
+    x: 60,
+    y: 300,
+    w: 32,
+    h: 48,
+    vx: 0,
+    vy: 0,
+    ground: false
+};
+
+const platforms = [
+    {x:0,y:400,w:600,h:50},
+    {x:680,y:400,w:450,h:50},
+    {x:1200,y:400,w:550,h:50},
+    {x:1800,y:400,w:700,h:50},
+    {x:180,y:320,w:120,h:18},
+    {x:400,y:270,w:130,h:18},
+    {x:750,y:320,w:120,h:18},
+    {x:1000,y:260,w:140,h:18},
+    {x:1350,y:320,w:140,h:18},
+    {x:1600,y:270,w:140,h:18},
+    {x:1950,y:320,w:150,h:18}
+];
+
+let worldWidth = 2500;
+
+function reset() {
+    score = 0;
+    lives = 3;
+    camera = 0;
+
+    player.x = 60;
+    player.y = 300;
+    player.vx = 0;
+    player.vy = 0;
+
+    coins = [
+        {x:220,y:280},
+        {x:440,y:230},
+        {x:780,y:280},
+        {x:1040,y:220},
+        {x:1390,y:280},
+        {x:1640,y:230},
+        {x:2000,y:280},
+        {x:2200,y:350}
+    ];
+
+    enemies = [
+        {x:500,y:368,vx:1.5},
+        {x:900,y:368,vx:1.5},
+        {x:1450,y:368,vx:2}
+    ];
+
+    updateStats();
+}
+
+function updateStats() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("lives").textContent = lives;
+}
+
+function drawNaruto(x,y) {
+    ctx.save();
+    ctx.translate(x-camera,y);
+
+    // Orange ninja body
+    ctx.fillStyle = "#ff791c";
+    ctx.fillRect(5,20,25,28);
+
+    // Legs
+    ctx.fillStyle = "#173c91";
+    ctx.fillRect(5,42,9,7);
+    ctx.fillRect(22,42,9,7);
+
+    // Face
+    ctx.fillStyle = "#ffcf9e";
+    ctx.fillRect(7,5,22,20);
+
+    // Yellow spiky hair
+    ctx.fillStyle = "#ffd52b";
+    ctx.beginPath();
+    ctx.moveTo(5,9);
+    ctx.lineTo(0,0);
+    ctx.lineTo(10,4);
+    ctx.lineTo(13,-5);
+    ctx.lineTo(19,4);
+    ctx.lineTo(27,-3);
+    ctx.lineTo(30,8);
+    ctx.lineTo(34,3);
+    ctx.lineTo(29,15);
+    ctx.lineTo(7,15);
+    ctx.fill();
+
+    // Ninja headband
+    ctx.fillStyle = "#344d8d";
+    ctx.fillRect(6,10,25,5);
+
+    ctx.fillStyle = "#cbd9ef";
+    ctx.fillRect(14,10,9,5);
+
+    // Eyes
+    ctx.fillStyle = "#171717";
+    ctx.fillRect(11,17,3,3);
+    ctx.fillRect(23,17,3,3);
+
+    // Smile
+    ctx.fillStyle = "#9c3825";
+    ctx.fillRect(16,22,7,2);
+
+    // Whisker marks
+    ctx.strokeStyle = "#a85a3c";
+    ctx.lineWidth = 1;
+    for(let i=0;i<3;i++) {
+        ctx.beginPath();
+        ctx.moveTo(7,19+i*3);
+        ctx.lineTo(12,20+i*3);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawWorld() {
+    // Sky
+    ctx.fillStyle = "#79d6ff";
+    ctx.fillRect(0,0,W,H);
+
+    // Clouds
+    ctx.fillStyle = "white";
+    for(let i=0;i<8;i++) {
+        let x = ((i*230-camera*0.4)%1000+1000)%1000;
+        ctx.beginPath();
+        ctx.arc(x,75,20,0,Math.PI*2);
+        ctx.arc(x+22,70,25,0,Math.PI*2);
+        ctx.arc(x+45,77,18,0,Math.PI*2);
+        ctx.fill();
+    }
+
+    // Platforms
+    platforms.forEach(p => {
+        ctx.fillStyle = "#228b22";
+        ctx.fillRect(p.x-camera,p.y,p.w,p.h);
+
+        ctx.fillStyle = "#8b542e";
+        ctx.fillRect(p.x-camera,p.y+12,p.w,p.h-12);
+    });
+
+    // Coins
+    coins.forEach(c => {
+        ctx.fillStyle = "#ffd700";
+        ctx.beginPath();
+        ctx.arc(c.x-camera,c.y,10,0,Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = "#fff3a0";
+        ctx.stroke();
+    });
+
+    // Enemies
+    enemies.forEach(e => {
+        ctx.fillStyle = "#8b35ad";
+        ctx.beginPath();
+        ctx.arc(e.x-camera,e.y,17,0,Math.PI*2);
+        ctx.fill();
+
+        ctx.fillStyle = "white";
+        ctx.fillRect(e.x-camera-8,e.y-5,5,6);
+        ctx.fillRect(e.x-camera+4,e.y-5,5,6);
+    });
+
+    // Finish flag
+    ctx.fillStyle = "#222";
+    ctx.fillRect(2350-camera,285,5,115);
+    ctx.fillStyle = "#ffdf30";
+    ctx.fillRect(2355-camera,285,45,28);
+}
+
+function draw() {
+    drawWorld();
+    drawNaruto(player.x,player.y);
+}
+
+function respawn() {
+    lives--;
+    updateStats();
+
+    if(lives <= 0) {
+        gameOver();
+        return;
+    }
+
+    player.x = Math.max(60, player.x-100);
+    player.y = 300;
+    player.vx = 0;
+    player.vy = 0;
+}
+
+function update() {
+    if(!running || paused) return;
+
+    player.vx = 0;
+
+    if(keys.left) player.vx = -4;
+    if(keys.right) player.vx = 4;
+
+    player.x += player.vx;
+
+    // Horizontal collision
+    platforms.forEach(p => {
+        if(player.x < p.x+p.w &&
+           player.x+player.w > p.x &&
+           player.y+player.h > p.y &&
+           player.y < p.y+p.h) {
+
+            if(player.vx > 0) player.x = p.x-player.w;
+            if(player.vx < 0) player.x = p.x+p.w;
+        }
+    });
+
+    player.vy += 0.55;
+    if(player.vy > 12) player.vy = 12;
+
+    player.y += player.vy;
+    player.ground = false;
+
+    // Landing on platforms
+    platforms.forEach(p => {
+        if(player.x+player.w > p.x &&
+           player.x < p.x+p.w &&
+           player.y+player.h > p.y &&
+           player.y+player.h-player.vy <= p.y) {
+
+            player.y = p.y-player.h;
+            player.vy = 0;
+            player.ground = true;
+        }
+    });
+
+    // Collect coins
+    coins = coins.filter(c => {
+        let collected =
+            Math.abs((player.x+16)-c.x)<22 &&
+            Math.abs((player.y+24)-c.y)<28;
+
+        if(collected) {
+            score += 10;
+            updateStats();
+            return false;
+        }
+        return true;
+    });
+
+    // Enemies
+    enemies.forEach(e => {
+        e.x += e.vx;
+        if(e.x < 450 || e.x > 1800) e.vx *= -1;
+
+        let touching =
+            player.x+player.w > e.x-15 &&
+            player.x < e.x+15 &&
+            player.y+player.h > e.y-15 &&
+            player.y < e.y+15;
+
+        if(touching) {
+            respawn();
+        }
+    });
+
+    if(player.y > H+80) respawn();
+
+    camera = Math.max(0,Math.min(player.x-250,worldWidth-W));
+
+    if(player.x > 2350) {
+        winGame();
+    }
+
+    draw();
+}
+
+function gameOver() {
+    running = false;
+    document.getElementById("menu").style.display = "flex";
+    document.getElementById("menuTitle").textContent =
+    "YUYU NARUTO ADVENTURE!";
+    document.getElementById("menuText").textContent =
+        "Final Score: " + score;
+    document.getElementById("play").textContent = "PLAY AGAIN";
+}
+
+function winGame() {
+    running = false;
+    document.getElementById("menu").style.display = "flex";
+    document.getElementById("menuTitle").textContent = "🏆 YOU WIN!";
+    document.getElementById("menuText").textContent =
+        "Naruto reached the finish! Score: " + score;
+    document.getElementById("play").textContent = "PLAY AGAIN";
+}
+
+function startGame() {
+    reset();
+    paused = false;
+    running = true;
+    document.getElementById("menu").style.display = "none";
+}
+
+function pauseGame() {
+    if(!running) return;
+
+    paused = !paused;
+
+    if(paused) {
+        document.getElementById("menu").style.display = "flex";
+        document.getElementById("menuTitle").textContent = "PAUSED";
+        document.getElementById("menuText").textContent = "Take a break!";
+        document.getElementById("play").textContent = "RESUME";
+    } else {
+        document.getElementById("menu").style.display = "none";
+    }
+}
+
+document.getElementById("play").onclick = () => {
+    if(paused) {
+        paused = false;
+        document.getElementById("menu").style.display = "none";
+    } else {
+        startGame();
+    }
+};
+
+document.getElementById("pause").onclick = pauseGame;
+document.getElementById("restart").onclick = startGame;
+
+// Keyboard
+document.addEventListener("keydown", e => {
+    if(e.key === "ArrowLeft" || e.key === "a") keys.left = true;
+    if(e.key === "ArrowRight" || e.key === "d") keys.right = true;
+
+    if((e.key === "ArrowUp" || e.key === " " || e.key === "w")
+       && player.ground && running && !paused) {
+        player.vy = -11;
+        player.ground = false;
+    }
+});
+
+document.addEventListener("keyup", e => {
+    if(e.key === "ArrowLeft" || e.key === "a") keys.left = false;
+    if(e.key === "ArrowRight" || e.key === "d") keys.right = false;
+});
+
+// Mobile controls
+function holdButton(id,key) {
+    const btn = document.getElementById(id);
+
+    btn.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        keys[key] = true;
+    });
+
+    ["pointerup","pointerleave","pointercancel"].forEach(event => {
+        btn.addEventListener(event, () => keys[key] = false);
+    });
+}
+
+holdButton("left","left");
+holdButton("right","right");
+
+document.getElementById("jump").addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if(player.ground && running && !paused) {
+        player.vy = -11;
+        player.ground = false;
+    }
+});
+
+reset();
+draw();
+
+setInterval(update,16);
