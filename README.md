@@ -1,4 +1,4 @@
-# PENGEMBARAAN RAIYONS: RAIYONS NARUTO ADVENTURE!
+# RAIYONS Naruto Adventure
 
 A colorful browser-based Naruto-inspired platform adventure. Collect coins, avoid roaming enemies, and reach the finish flag!
 
