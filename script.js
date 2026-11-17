@@ -4,6 +4,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const scoreElement = document.getElementById("score");
 const livesElement = document.getElementById("lives");
+const bestScoreElement = document.getElementById("bestScore");
 const menu = document.getElementById("menu");
 const menuTitle = document.getElementById("menuTitle");
 const menuText = document.getElementById("menuText");
@@ -13,6 +14,7 @@ const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
 const WORLD_WIDTH = 2500;
 const FINISH_X = 2350;
+const BEST_SCORE_KEY = "yuyu-naruto-adventure-best";
 
 let score = 0;
 let lives = 3;
@@ -22,8 +24,10 @@ let camera = 0;
 let keys = { left: false, right: false };
 let coins = [];
 let enemies = [];
+let particles = [];
 let animationFrame = 0;
 let lastFrameTime = 0;
+let gameTime = 0;
 
 const player = {
   x: 60,
@@ -33,6 +37,7 @@ const player = {
   velocityX: 0,
   velocityY: 0,
   onGround: false,
+  invulnerableFrames: 0,
 };
 
 const platforms = [
@@ -49,10 +54,34 @@ const platforms = [
   { x: 1950, y: 320, width: 150, height: 18 },
 ];
 
+function loadBestScore() {
+  try {
+    const savedScore = Number(localStorage.getItem(BEST_SCORE_KEY));
+    return Number.isFinite(savedScore) && savedScore > 0 ? savedScore : 0;
+  } catch {
+    return 0;
+  }
+}
+
+let bestScore = loadBestScore();
+
+function saveBestScore() {
+  if (score <= bestScore) return;
+  bestScore = score;
+  try {
+    localStorage.setItem(BEST_SCORE_KEY, String(bestScore));
+  } catch {
+    // The game remains playable when browser storage is unavailable.
+  }
+  updateStats();
+}
+
 function reset() {
   score = 0;
   lives = 3;
   camera = 0;
+  gameTime = 0;
+  particles = [];
   keys = { left: false, right: false };
 
   player.x = 60;
@@ -60,6 +89,7 @@ function reset() {
   player.velocityX = 0;
   player.velocityY = 0;
   player.onGround = false;
+  player.invulnerableFrames = 0;
 
   coins = [
     { x: 220, y: 280 },
@@ -84,20 +114,60 @@ function reset() {
 function updateStats() {
   scoreElement.textContent = String(score);
   livesElement.textContent = String(lives);
+  bestScoreElement.textContent = String(bestScore);
+}
+
+function drawBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+  sky.addColorStop(0, "#55b9f4");
+  sky.addColorStop(0.72, "#b3edff");
+  sky.addColorStop(1, "#e5f7df");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  // Distant hills add depth and drift at a slower rate than the level.
+  ctx.fillStyle = "#91c9b0";
+  ctx.beginPath();
+  ctx.moveTo(0, 300);
+  for (let x = 0; x <= WIDTH; x += 80) {
+    const hillY = 270 + Math.sin((x + camera * 0.12) / 95) * 28;
+    ctx.lineTo(x, hillY);
+  }
+  ctx.lineTo(WIDTH, HEIGHT);
+  ctx.lineTo(0, HEIGHT);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#fff";
+  for (let index = 0; index < 8; index += 1) {
+    const x = ((index * 230 - camera * 0.4) % 1000 + 1000) % 1000;
+    const y = 68 + Math.sin(gameTime * 0.025 + index) * 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.arc(x + 22, y - 5, 23, 0, Math.PI * 2);
+    ctx.arc(x + 44, y + 2, 16, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawPlayer() {
+  if (player.invulnerableFrames > 0 && Math.floor(player.invulnerableFrames / 5) % 2 === 0) return;
+
   ctx.save();
   ctx.translate(player.x - camera, player.y);
 
-  // Body and legs.
+  // Soft shadow gives the character a little depth.
+  ctx.fillStyle = "#173c9140";
+  ctx.beginPath();
+  ctx.ellipse(17, 48, 17, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.fillStyle = "#ff791c";
   ctx.fillRect(5, 20, 25, 28);
   ctx.fillStyle = "#173c91";
   ctx.fillRect(5, 42, 9, 7);
   ctx.fillRect(22, 42, 9, 7);
 
-  // Face and hair.
   ctx.fillStyle = "#ffcf9e";
   ctx.fillRect(7, 5, 22, 20);
   ctx.fillStyle = "#ffd52b";
@@ -114,7 +184,6 @@ function drawPlayer() {
   ctx.lineTo(7, 15);
   ctx.fill();
 
-  // Headband, eyes, smile, and whisker marks.
   ctx.fillStyle = "#344d8d";
   ctx.fillRect(6, 10, 25, 5);
   ctx.fillStyle = "#cbd9ef";
@@ -133,65 +202,111 @@ function drawPlayer() {
     ctx.lineTo(12, 20 + index * 3);
     ctx.stroke();
   }
-
   ctx.restore();
 }
 
 function drawWorld() {
-  ctx.fillStyle = "#79d6ff";
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  // Clouds scroll more slowly than the ground for a parallax effect.
-  ctx.fillStyle = "#fff";
-  for (let index = 0; index < 8; index += 1) {
-    const x = ((index * 230 - camera * 0.4) % 1000 + 1000) % 1000;
-    ctx.beginPath();
-    ctx.arc(x, 75, 20, 0, Math.PI * 2);
-    ctx.arc(x + 22, 70, 25, 0, Math.PI * 2);
-    ctx.arc(x + 45, 77, 18, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  drawBackground();
 
   platforms.forEach((platform) => {
-    ctx.fillStyle = "#228b22";
-    ctx.fillRect(platform.x - camera, platform.y, platform.width, platform.height);
+    const x = platform.x - camera;
+    ctx.fillStyle = "#217f37";
+    ctx.fillRect(x, platform.y, platform.width, platform.height);
+    ctx.fillStyle = "#48bd53";
+    ctx.fillRect(x, platform.y, platform.width, Math.min(7, platform.height));
     ctx.fillStyle = "#8b542e";
-    ctx.fillRect(
-      platform.x - camera,
-      platform.y + 12,
-      platform.width,
-      platform.height - 12,
-    );
+    ctx.fillRect(x, platform.y + 12, platform.width, platform.height - 12);
   });
 
-  coins.forEach((coin) => {
+  coins.forEach((coin, index) => {
+    const bob = Math.sin(gameTime * 0.09 + index * 1.7) * 4;
+    const x = coin.x - camera;
+    const y = coin.y + bob;
     ctx.fillStyle = "#ffd700";
     ctx.beginPath();
-    ctx.arc(coin.x - camera, coin.y, 10, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 9 + Math.abs(Math.sin(gameTime * 0.06 + index)) * 2, 11, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#fff3a0";
+    ctx.strokeStyle = "#fff4a8";
+    ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.fillStyle = "#fff9d6";
+    ctx.fillRect(x - 1, y - 6, 2, 5);
   });
 
   enemies.forEach((enemy) => {
+    const x = enemy.x - camera;
+    ctx.fillStyle = "#57278140";
+    ctx.beginPath();
+    ctx.ellipse(x, enemy.y + 16, 17, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = "#8b35ad";
     ctx.beginPath();
-    ctx.arc(enemy.x - camera, enemy.y, 17, 0, Math.PI * 2);
+    ctx.arc(x, enemy.y, 17, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#fff";
-    ctx.fillRect(enemy.x - camera - 8, enemy.y - 5, 5, 6);
-    ctx.fillRect(enemy.x - camera + 4, enemy.y - 5, 5, 6);
+    ctx.fillRect(x - 8, enemy.y - 5, 5, 6);
+    ctx.fillRect(x + 4, enemy.y - 5, 5, 6);
+    ctx.fillStyle = "#24133a";
+    ctx.fillRect(x - 6, enemy.y - 3, 2, 3);
+    ctx.fillRect(x + 6, enemy.y - 3, 2, 3);
   });
 
-  ctx.fillStyle = "#222";
+  ctx.fillStyle = "#352d35";
   ctx.fillRect(FINISH_X - camera, 285, 5, 115);
   ctx.fillStyle = "#ffdf30";
-  ctx.fillRect(FINISH_X + 5 - camera, 285, 45, 28);
+  ctx.beginPath();
+  ctx.moveTo(FINISH_X + 5 - camera, 285);
+  ctx.lineTo(FINISH_X + 52 - camera, 300);
+  ctx.lineTo(FINISH_X + 5 - camera, 318);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#fff4a8";
+  ctx.fillRect(FINISH_X + 11 - camera, 296, 12, 4);
+
+  drawParticles();
+}
+
+function drawParticles() {
+  particles.forEach((particle) => {
+    ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+    ctx.fillStyle = particle.color;
+    ctx.beginPath();
+    ctx.arc(particle.x - camera, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 }
 
 function draw() {
   drawWorld();
   drawPlayer();
+}
+
+function burst(x, y, color, count = 10) {
+  for (let index = 0; index < count; index += 1) {
+    const angle = (Math.PI * 2 * index) / count;
+    const speed = 1 + Math.random() * 2.2;
+    particles.push({
+      x,
+      y,
+      velocityX: Math.cos(angle) * speed,
+      velocityY: Math.sin(angle) * speed,
+      size: 2 + Math.random() * 2,
+      color,
+      life: 24 + Math.floor(Math.random() * 12),
+      maxLife: 36,
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter((particle) => particle.life > 0);
+  particles.forEach((particle) => {
+    particle.x += particle.velocityX;
+    particle.y += particle.velocityY;
+    particle.velocityY += 0.04;
+    particle.life -= 1;
+  });
 }
 
 function setMenu(title, text, buttonText) {
@@ -204,6 +319,7 @@ function setMenu(title, text, buttonText) {
 function respawn() {
   lives -= 1;
   updateStats();
+  burst(player.x + player.width / 2, player.y + player.height / 2, "#ff8b4d", 16);
 
   if (lives <= 0) {
     gameOver();
@@ -215,6 +331,7 @@ function respawn() {
   player.velocityX = 0;
   player.velocityY = 0;
   player.onGround = false;
+  player.invulnerableFrames = 100;
 }
 
 function overlapsPlatform(platform) {
@@ -227,10 +344,12 @@ function overlapsPlatform(platform) {
 }
 
 function update() {
+  gameTime += 1;
+  if (player.invulnerableFrames > 0) player.invulnerableFrames -= 1;
+
   player.velocityX = Number(keys.right) * 4 - Number(keys.left) * 4;
   player.x += player.velocityX;
 
-  // Resolve horizontal collisions.
   platforms.forEach((platform) => {
     if (!overlapsPlatform(platform)) return;
     if (player.velocityX > 0) player.x = platform.x - player.width;
@@ -242,7 +361,6 @@ function update() {
   player.y += player.velocityY;
   player.onGround = false;
 
-  // Land only when falling onto the top of a platform.
   platforms.forEach((platform) => {
     const overlapsHorizontally =
       player.x + player.width > platform.x && player.x < platform.x + platform.width;
@@ -263,7 +381,9 @@ function update() {
 
     if (collected) {
       score += 10;
+      saveBestScore();
       updateStats();
+      burst(coin.x, coin.y, "#ffd700", 12);
       return false;
     }
     return true;
@@ -286,7 +406,9 @@ function update() {
     if (touching) hitEnemy = true;
   });
 
-  if (hitEnemy) {
+  updateParticles();
+
+  if (hitEnemy && player.invulnerableFrames === 0) {
     respawn();
     if (!running) return;
   }
@@ -309,13 +431,15 @@ function update() {
 function gameOver() {
   running = false;
   paused = false;
-  setMenu("YUYU NARUTO ADVENTURE!", `Final Score: ${score}`, "PLAY AGAIN");
+  saveBestScore();
+  setMenu("YUYU NARUTO ADVENTURE!", `Game over — final score: ${score}`, "PLAY AGAIN");
 }
 
 function winGame() {
   running = false;
   paused = false;
-  setMenu("🏆 YOU WIN!", `Naruto reached the finish! Score: ${score}`, "PLAY AGAIN");
+  saveBestScore();
+  setMenu("🏆 YOU WIN!", `You reached the finish with ${score} points!`, "PLAY AGAIN");
 }
 
 function startGame() {
@@ -329,10 +453,10 @@ function startGame() {
 
 function pauseGame() {
   if (!running) return;
-
   paused = !paused;
   if (paused) {
-    setMenu("PAUSED", "Take a break!", "RESUME");
+    keys = { left: false, right: false };
+    setMenu("PAUSED", "Take a break! Your adventure is waiting.", "RESUME");
   } else {
     menu.hidden = true;
     lastFrameTime = 0;
@@ -344,12 +468,9 @@ function gameLoop(timestamp) {
   if (!running) return;
 
   if (!paused) {
-    // Clamp frame time so returning to a background tab does not skip gameplay.
-    const elapsed = lastFrameTime ? Math.min(timestamp - lastFrameTime, 32) : 16;
     lastFrameTime = timestamp;
-    if (elapsed >= 0) update();
+    update();
   }
-
   if (running) animationFrame = requestAnimationFrame(gameLoop);
 }
 
@@ -376,6 +497,10 @@ document.getElementById("restart").addEventListener("click", startGame);
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   if (["arrowleft", "arrowright", "arrowup", " "].includes(key)) event.preventDefault();
+  if (key === "escape") {
+    pauseGame();
+    return;
+  }
   if (key === "arrowleft" || key === "a") keys.left = true;
   if (key === "arrowright" || key === "d") keys.right = true;
   if (key === "arrowup" || key === " " || key === "w") jump();

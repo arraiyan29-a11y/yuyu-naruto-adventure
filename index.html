@@ -4,18 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#06132e">
+  <meta name="description" content="A colorful Naruto-inspired platform adventure. Collect coins, avoid enemies, and reach the finish!">
   <title>YUYU Naruto Adventure</title>
   <link rel="stylesheet" href="style.css">
   <script src="script.js" defer></script>
 </head>
 <body>
   <main class="game-container">
-    <h1>🍥 YUYU CREATOR</h1>
-    <h2 class="subtitle">YUYU NARUTO ADVENTURE!</h2>
+    <header class="game-header">
+      <p class="eyebrow">A mini platform adventure</p>
+      <h1>🍥 YUYU CREATOR</h1>
+      <h2 class="subtitle">YUYU NARUTO ADVENTURE!</h2>
+    </header>
 
     <section class="stats" aria-label="Game statistics">
-      <span>⭐ Score: <strong id="score">0</strong></span>
-      <span>❤️ Lives: <strong id="lives">3</strong></span>
+      <span>⭐ Score: <strong id="score" aria-live="polite">0</strong></span>
+      <span>❤️ Lives: <strong id="lives" aria-live="polite">3</strong></span>
+      <span>🏆 Best: <strong id="bestScore">0</strong></span>
     </section>
 
     <section class="screen" aria-label="Game area">
@@ -23,9 +28,13 @@
         Your browser does not support the HTML canvas element.
       </canvas>
       <div id="menu" class="menu" role="dialog" aria-modal="true" aria-labelledby="menuTitle" aria-describedby="menuText">
-        <h2 id="menuTitle">YUYU NARUTO ADVENTURE!</h2>
-        <p id="menuText">Ready to become a Hokage?</p>
-        <button id="play" type="button">▶ PLAY GAME</button>
+        <div class="menu-card">
+          <span class="menu-icon" aria-hidden="true">🍥</span>
+          <h2 id="menuTitle">YUYU NARUTO ADVENTURE!</h2>
+          <p id="menuText">Ready to become a Hokage?</p>
+          <button id="play" type="button">▶ PLAY GAME</button>
+          <p class="menu-hint">Collect coins · Avoid enemies · Reach the flag</p>
+        </div>
       </div>
     </section>
 
@@ -36,10 +45,11 @@
     </div>
 
     <div class="actions">
-      <button id="pause" type="button">⏸ PAUSE</button>
-      <button id="restart" type="button">🔄 RESTART</button>
+      <button id="pause" class="button-secondary" type="button">⏸ PAUSE</button>
+      <button id="restart" class="button-secondary" type="button">↻ RESTART</button>
     </div>
 
+    <p class="control-hint">Move: ← → or A / D <span aria-hidden="true">·</span> Jump: ↑, W, or Space <span aria-hidden="true">·</span> Pause: Esc</p>
     <p class="footer">GAM RAIYAN GAMING © 2026</p>
   </main>
 </body>
