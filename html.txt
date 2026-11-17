@@ -4,14 +4,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YUYU CREATER: YUYU NARUTO ADVENTURE!</title>
+<title>PENGEMBARAAN RAIYONS: RAIYONS NARUTO ADVENTURE!</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="game-container">
-   <h1>🍥 YUYU CREATER</h1>
-<h3>YUYU NARUTO ADVENTURE!</h3>
+   <h1>🍥 PENGEMBARAAN RAIYONS</h1>
+<h3>RAIYONS NARUTO ADVENTURE!</h3>
 
     <div class="stats">
         <span>⭐ Score: <b id="score">0</b></span>
@@ -21,7 +21,7 @@
     <div class="screen">
         <canvas id="game" width="800" height="450"></canvas>
         <div id="menu">
-            <h2 id="menuTitle">YUYU NARUTO ADVENTURE!</h2>
+            <h2 id="menuTitle">RAIYONS NARUTO ADVENTURE!</h2>
             <p id="menuText">Ready to become a Hokage?</p>
             <button id="play">▶ PLAY GAME</button>
         </div>
